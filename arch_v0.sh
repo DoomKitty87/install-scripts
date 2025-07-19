@@ -170,11 +170,8 @@ refind-install --root /mnt # &>/dev/null
 # Set rEFInd kernel options
 echo "Setting rEFInd kernel options"
 UUID=$(blkid -s UUID -o value $CRYPTROOT)
-BTRFSUUID=$(blkid -s UUID -o value $BTRFS)
 cat > /mnt/boot/refind_linux.conf <<EOF
-    "Boot with standard options"  "root=UUID=$BTRFSUUID ro cryptdevice=UUID=$UUID:cryptroot:allow-discards quiet"
-    "Boot to single-user mode"    "root=UUID=$BTRFSUUID ro cryptdevice=UUID=$UUID:cryptroot:allow-discards quiet single"
-    "Boot with minimal options"   "root=UUID=$BTRFSUUID ro cryptdevice=UUID=$UUID:cryptroot:allow-discards"
+    "Arch Linux"  "cryptdevice=UUID=$UUID:cryptroot root=/dev/mapper/cryptroot rootflags=subvol=@ rw quiet loglevel=3"
 EOF
 
 # Chroot into new system
