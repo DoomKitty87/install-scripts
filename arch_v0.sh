@@ -118,7 +118,7 @@ mount -o "$mountopts",subvol=@var_log "$BTRFS" /mnt/var/log
 chattr +C /mnt/var/log
 
 # Mount ESP
-mount "$ESP" /mnt/boot
+mount "$ESP" /mnt/boot/
 
 # Installation
 
