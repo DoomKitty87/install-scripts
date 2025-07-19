@@ -162,6 +162,20 @@ cat > /mnt/etc/mkinitcpio.conf <<EOF
 HOOKS=(systemd autodetect keyboard sd-vconsole modconf block sd-encrypt filesystems)
 EOF
 
+# rEFInd
+echo "Setting up rEFInd"
+pacstrap -K /mnt refind &>/dev/null
+refind-install --root /mnt # &>/dev/null
+
+# Set rEFInd kernel options
+echo "Setting rEFInd kernel options"
+UUID=$(blkid -s UUID -o value $CRYPTROOT)
+cat > /mnt/boot/refind_linux.conf <<EOF
+    "Boot with standard options"  "root=UUID=$BTRFS ro cryptdevice=UUID=$UUID:cryptroot:allow-discards quiet"
+    "Boot to single-user mode"    "root=UUID=$BTRFS ro cryptdevice=UUID=$UUID:cryptroot:allow-discards quiet single"
+    "Boot with minimal options"   "root=UUID=$BTRFS ro cryptdevice=UUID=$UUID:cryptroot:allow-discards"
+EOF
+
 # Chroot into new system
 arch-chroot /mnt /bin/bash <<EOF
     # Setting timezone
@@ -180,20 +194,6 @@ arch-chroot /mnt /bin/bash <<EOF
 
     # Generating a new initramfs.
     mkinitcpio -P &>/dev/null
-
-    # Install rEFInd
-    echo "Installing bootloader"
-    pacstrap -K refind &>/dev/null
-    refind-install &>/dev/null
-
-    # Set rEFInd kernel options
-    echo "Setting rEFInd kernel options"
-    UUID=$(blkid -s UUID -o value $CRYPTROOT)
-    cat > /boot/refind_linux.conf <<EOF
-    "Boot with standard options"  "root=UUID=$BTRFS ro cryptdevice=UUID=$UUID:cryptroot:allow-discards quiet"
-    "Boot to single-user mode"    "root=UUID=$BTRFS ro cryptdevice=UUID=$UUID:cryptroot:allow-discards quiet single"
-    "Boot with minimal options"   "root=UUID=$BTRFS ro cryptdevice=UUID=$UUID:cryptroot:allow-discards"
-    EOF
 EOF
 
 # Set root password
