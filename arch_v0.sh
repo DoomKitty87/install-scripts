@@ -171,7 +171,6 @@ refind-install --root /mnt # &>/dev/null
 echo "Setting rEFInd kernel options"
 UUID=$(blkid -s UUID -o value $CRYPTROOT)
 cat > /mnt/boot/refind_linux.conf <<EOF
-    "Arch Linux"  "cryptdevice=UUID=$UUID:cryptroot root=/dev/mapper/cryptroot rootflags=subvol=@ rw quiet loglevel=3"
     "Standard" "root=/dev/mapper/cryptroot rd.luks.name=$UUID=cryptroot rootflags=subvol=@ rw quiet loglevel=3"
 EOF
 
