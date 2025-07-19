@@ -163,47 +163,48 @@ HOOKS=(systemd autodetect keyboard sd-vconsole modconf block sd-encrypt filesyst
 EOF
 
 # Chroot into new system
-arch-chroot /mnt
+arch-chroot /mnt /bin/bash <<EOF
+    # Setting timezone
+    ln -sf /usr/share/zoneinfo/America/Los_Angeles /etc/localtime
+    hwclock --systohc
 
-# Reminder: After chrooting, /mnt prefix is not necessary (operating in the new system)
+    # Enable systemd-timesyncd
+    echo "Enabling systemd-timesyncd"
+    systemctl enable systemd-timesyncd.service
 
-# Setting timezone
-ln -sf /usr/share/zoneinfo/America/Los_Angeles /etc/localtime
-hwclock --systohc
+    # Set locale
+    sed -i "/^#en_US.UTF-8/s/^#//" /etc/locale.gen
+    locale-gen &>/dev/null
+    echo "LANG=en_US.UTF-8" > /etc/locale.conf
+    echo "KEYMAP=us" > /etc/vconsole.conf
 
-# Enable systemd-timesyncd
-echo "Enabling systemd-timesyncd"
-systemctl enable systemd-timesyncd.service
+    # Generating a new initramfs.
+    mkinitcpio -P &>/dev/null
 
-# Set locale
-sed -i "/^#en_US.UTF-8/s/^#//" /etc/locale.gen
-locale-gen &>/dev/null
-echo "LANG=en_US.UTF-8" > /etc/locale.conf
-echo "KEYMAP=us" > /etc/vconsole.conf
+    # Install rEFInd
+    echo "Installing bootloader"
+    pacstrap -K refind &>/dev/null
+    refind-install &>/dev/null
 
-# Install rEFInd
-echo "Installing bootloader"
-pacstrap -K refind &>/dev/null
-refind-install &>/dev/null
-
-# Set rEFInd kernel options
-echo "Setting rEFInd kernel options"
-UUID=$(blkid -s UUID -o value $CRYPTROOT)
-cat > /boot/refind_linux.conf <<EOF
-"Boot with standard options"  "root=UUID=$BTRFS ro cryptdevice=UUID=$UUID:cryptroot:allow-discards quiet"
-"Boot to single-user mode"    "root=UUID=$BTRFS ro cryptdevice=UUID=$UUID:cryptroot:allow-discards quiet single"
-"Boot with minimal options"   "root=UUID=$BTRFS ro cryptdevice=UUID=$UUID:cryptroot:allow-discards"
+    # Set rEFInd kernel options
+    echo "Setting rEFInd kernel options"
+    UUID=$(blkid -s UUID -o value $CRYPTROOT)
+    cat > /boot/refind_linux.conf <<EOF
+    "Boot with standard options"  "root=UUID=$BTRFS ro cryptdevice=UUID=$UUID:cryptroot:allow-discards quiet"
+    "Boot to single-user mode"    "root=UUID=$BTRFS ro cryptdevice=UUID=$UUID:cryptroot:allow-discards quiet single"
+    "Boot with minimal options"   "root=UUID=$BTRFS ro cryptdevice=UUID=$UUID:cryptroot:allow-discards"
+    EOF
 EOF
 
 # Set root password
 echo "Setting root password"
-echo "root:$rootpass" | chpasswd
+echo "root:$rootpass" | arch-chroot /mnt chpasswd
 
 # Create user
 echo "Creating user $username"
-echo "%wheel ALL=(ALL:ALL) ALL" > /etc/sudoers.d/wheel
-useradd -m -G wheel -s /bin/bash "$username"
-echo "$username:$userpass" | chpasswd
+echo "%wheel ALL=(ALL:ALL) ALL" > /mnt/etc/sudoers.d/wheel
+arch-chroot /mnt useradd -m -G wheel -s /bin/bash "$username"
+echo "$username:$userpass" | arch-chroot /mnt chpasswd
 
 # Enable services
 services=(btrfs-scrub@-.timer btrfs-scrub@home.timer btrfs-scrub@var-log.timer btrfs-scrub@\\x2esnapshots.timer systemd-oomd)
