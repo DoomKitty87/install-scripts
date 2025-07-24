@@ -150,7 +150,7 @@ pacstrap -K /mnt networkmanager &>/dev/null
 systemctl enable NetworkManager --root=/mnt &>/dev/null
 
 # Install some utilities
-pacstrap -K /mnt vim sudo git openssh &>/dev/null
+pacstrap -K /mnt vim sudo git openssh reflector &>/dev/null
 
 # Fstab generation
 echo "Generating fstab"
@@ -205,7 +205,7 @@ arch-chroot /mnt useradd -m -G wheel -s /bin/bash "$username"
 echo "$username:$userpass" | arch-chroot /mnt chpasswd
 
 # Enable services
-services=(btrfs-scrub@-.timer btrfs-scrub@home.timer btrfs-scrub@var-log.timer btrfs-scrub@\\x2esnapshots.timer systemd-oomd)
+services=(reflector.timer btrfs-scrub@-.timer btrfs-scrub@home.timer btrfs-scrub@var-log.timer btrfs-scrub@\\x2esnapshots.timer systemd-oomd)
 for service in "${services[@]}"; do
     systemctl enable "$service" --root=/mnt &>/dev/null
 done
