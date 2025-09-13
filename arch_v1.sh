@@ -44,6 +44,10 @@ read -r username
 echo "Please enter the password for the user $username to use for the installation:"
 read -r -s userpass
 
+echo "Please enter the disk to install to (e.g. /dev/nvme0n1 or /dev/sda):"
+read -r DISK
+echo "Using $DISK for installation"
+
 echo "Enter ESP partition (e.g. nvme0n1p1 or sda1):"
 read -r ESP_PART
 ESP="/dev/$ESP_PART"
