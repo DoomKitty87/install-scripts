@@ -87,6 +87,9 @@ if [[ "$response" != "y" && "$response" != "Y" ]]; then
     exit 1
 fi
 
+echo "How much space (in GB) do you want to leave for Windows?"
+read -r SIZE_GB
+
 echo "Shrinking NTFS filesystem to ${SIZE_GB}G..."
 ntfsresize -s ${SIZE_GB}G "$WIN_PART"
 
