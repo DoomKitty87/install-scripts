@@ -44,65 +44,26 @@ read -r username
 echo "Please enter the password for the user $username to use for the installation:"
 read -r -s userpass
 
-# Partitioning & Volumes & Stuff
-# I want to later make this work so you can dual boot with Windows. I think that the only difference will be just fill up all free space with BTRFS partition
-# And use existing ESP partition (? do I just go find it and then mount it?)
-
-# Ask for disk
-PS3="Please select the number of the corresponding disk (e.g. 1): "
-select ENTRY in $(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd");
-do
-    DISK="$ENTRY"
-    echo "Selected $DISK"
-    break
-done
-
-echo "Will use $DISK for the installation, continue (y/n)?"
-read -r response
-if [[ "$response" != "y" && "$response" != "Y" ]]; then
-    echo "Stopping"
-    exit 1
-fi
-
-echo "Detecting existing partitions on $DISK..."
-
-# Find ESP (EFI System Partition, FAT32, small)
-ESP_PART=$(lsblk -rno NAME,FSTYPE,SIZE,PARTTYPE,MOUNTPOINT "$DISK" | \
-    awk '$2=="vfat" && ($3 ~ /[0-9]*M/ || $3 ~ /[0-9]{1,4}M/) {print $1; exit}')
+echo "Enter ESP partition (e.g. nvme0n1p1 or sda1):"
+read -r ESP_PART
 ESP="/dev/$ESP_PART"
+echo "Using $ESP as ESP partition"
 
-# Find main Windows partition (largest NTFS)
-WIN_PART=$(lsblk -rno NAME,FSTYPE,SIZE "$DISK" | \
-    awk '$2=="ntfs" {print $1, $3}' | sort -k2 -h | tail -n1 | awk '{print $1}')
-WIN_PART="/dev/$WIN_PART"
+echo "Enter Windows partition (e.g. nvme0n1p3 or sda3):"
+read -r WIN_PART
+WIN="/dev/$WIN_PART"
+echo "Using $WIN as Windows partition"
 
-echo "Found ESP: $ESP"
-echo "Found Windows partition: $WIN_PART"
-
-echo "Ensure that ESP comes before NTFS partition in partition table."
-echo "Does this look correct (y/n)?"
-read -r response
-if [[ "$response" != "y" && "$response" != "Y" ]]; then
-    echo "Stopping"
-    exit 1
-fi
-
-echo "How much space (in GB) do you want to leave for Windows?"
-read -r SIZE_GB
-
-echo "Shrinking NTFS filesystem to ${SIZE_GB}G..."
-ntfsresize -s ${SIZE_GB}G "$WIN_PART"
+echo "How much space would you like to allocate to this installation (in MiB)?"
+read -r SIZE
 
 WIN_NUM=$(echo "$WIN_PART" | grep -o '[0-9]*$')
-
-parted -s "$DISK" resizepart "$WIN_NUM" "${SIZE_GB}G"
-
 WIN_END=$(parted -sm "$DISK" unit MiB print | awk -F: -v num=$WIN_NUM '$1==num {print $3}' | sed 's/MiB//')
 CRYPTROOT_START=$((WIN_END + 1))
 
 echo "Creating CRYPTROOT partition..."
 parted -s "$DISK" \
-    mkpart CRYPTROOT "${CRYPTROOT_START}MiB" 100%
+    mkpart CRYPTROOT "${CRYPTROOT_START}MiB" "$((CRYPTROOT_START + SIZE))MiB"
 
 CRYPTROOT="/dev/disk/by-partlabel/CRYPTROOT"
 
